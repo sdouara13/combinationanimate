@@ -7,9 +7,9 @@
  配置选项： 
 ##### 初始化：new Creator(config)
 ###### 代码示例: 
-* 链式拖动 drag.html
-* 齿轮 gear.html
-* 碰撞 collision.html
+* 链式拖动 http://www.wxapidev.cn/combinationanimate/demo/drag.html
+* 齿轮 http://www.wxapidev.cn/combinationanimate/demo/gear.html
+* 碰撞 http://www.wxapidev.cn/combinationanimate/demo/collision.html
 
 ###### HTML:
 ```$xslt
