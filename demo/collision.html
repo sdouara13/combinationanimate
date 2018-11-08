@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>碰撞</title>
+    <style>
+        .block {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-top: -75px;
+            margin-left: -75px;
+            width: 150px;
+            height: 150px;
+            user-select: none;
+            z-index: 0;
+            opacity: 0.8;
+        }
+        body {
+            width: 100%;
+            height: 900px;
+            top:0;
+            left: 0;
+            user-select: none;
+
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+<h1>拖动其中任意一个方块，然后用它去推动另一个方块</h1>
+<div class="block" style="margin-left:-75px;" id="a">A</div>
+<div class="block" style="margin-left:75px;" id="b">B</div>
+<script src="./utils.js"></script>
+<script src="../es5module.js"></script>
+<script>
+  const domList = ["a", "b"];
+  const body = document.body;
+  const matrixReg = new RegExp(/matrix\((\d+,\s?){4}(-?\d+),\s?(-?\d+)/);
+  domList.forEach(function(val, i) {
+    domList[i] = document.getElementById(val);
+    domList[i].style.backgroundColor = rand();
+    domList[i].dataset['drag'] = false;
+
+    if (!domList[i].style.transform) {
+      domList[i].style.transform = 'matrix(1, 0, 0, 1, 0, 0)';
+    }
+  });
+
+  /**
+   * 绑定交互事件
+   * */
+  body.addEventListener("mousedown", function (e) {
+    // console.log(e.target.id);
+    if (e.target.className === 'block') {
+      const target = e.target;
+      body.dataset['targetDom'] = target.id;
+      target.style.zIndex = 99999;
+      target.dataset['drag'] = true;
+      target.dataset['origin'] = JSON.stringify({
+        x: e.clientX,
+        y: e.clientY
+      });
+    }
+  });
+  body.addEventListener("mouseup", function (e) {
+    const target = document.getElementById(body.dataset['targetDom']);
+    if (target) {
+      target.style.zIndex = 0;
+      target.dataset['drag'] = false;
+      target.dataset['origin'] = JSON.stringify({
+        x: e.clientX,
+        y: e.clientY
+      });
+    }
+  });
+  body.addEventListener("mousemove", function (e) {
+    const target = document.getElementById(body.dataset['targetDom']);
+    if (target) {
+      if (target.dataset['drag'] === 'true') {
+        const coordinate = JSON.parse(target.dataset['origin']);
+        const delta = {
+          x: e.clientX - coordinate.x,
+          y: e.clientY - coordinate.y,
+        }
+        target.dataset['origin'] = JSON.stringify({
+          x: e.clientX,
+          y: e.clientY
+        });
+        let oldCoord = target.style.transform.match(matrixReg);
+        oldCoord = {
+          x: parseFloat(oldCoord[2]),
+          y: parseFloat(oldCoord[3]),
+        }
+        if(target.animateFn ) {
+          target.animateFn("matrix(1, 0, 0, 1, {0}, {1})".format(delta.x + oldCoord.x, delta.y + oldCoord.y))
+        }
+      }
+    }
+  });
+
+  /**
+   * 构造影响函数
+   * */
+  const DIRECTION = {
+    LEFT: 0,
+    TOP: 1,
+    RIGHT: 2,
+    BOTTOM: 3,
+  };
+
+  /** 获取对象属性
+   * @param obj       对象
+   * @param attribute 属性
+   */
+  function getDefaultStyle(obj, attribute) {
+    return obj.currentStyle ? obj.currentStyle[attribute] : document.defaultView.getComputedStyle(obj, false)[attribute];
+  }
+
+  function isCollision(elementA, elementB) {
+    const matrixA = getDefaultStyle(elementA, "transform").match(matrixReg);
+    const matrixB = getDefaultStyle(elementB, "transform").match(matrixReg);
+    let o = {
+      x: parseFloat(matrixA[2]) + parseFloat(getDefaultStyle(elementA, 'left')) + parseFloat(getDefaultStyle(elementA, 'marginLeft')),
+      y: parseFloat(matrixA[3]) + parseFloat(getDefaultStyle(elementA, 'top')) + + parseFloat(getDefaultStyle(elementA, 'marginTop')),
+      w: parseFloat(getDefaultStyle(elementA, 'width')),
+      h: parseFloat(getDefaultStyle(elementA, 'height'))
+    }
+
+    let d = {
+      x: parseFloat(matrixB[2]) + parseFloat(getDefaultStyle(elementB, 'left')) + parseFloat(getDefaultStyle(elementB, 'marginLeft')),
+      y: parseFloat(matrixB[3]) + parseFloat(getDefaultStyle(elementB, 'top')) + + parseFloat(getDefaultStyle(elementB, 'marginTop')),
+      w: parseFloat(getDefaultStyle(elementB, 'width')),
+      h: parseFloat(getDefaultStyle(elementB, 'height'))
+    }
+
+    let px, py;
+
+    px = o.x <= d.x ? d.x : o.x;
+    py = o.y <= d.y ? d.y : o.y;
+
+    // 判断点是否都在两个对象中
+    if (px >= o.x && px <= o.x + o.w && py >= o.y && py <= o.y + o.h && px >= d.x && px <= d.x + d.w && py >= d.y && py <= d.y + d.h) {
+      return {
+        collision: true,
+        delta: {
+          x: o.w - Math.abs(o.x - d.x),
+          y: o.h - Math.abs(o.y - d.y),
+        }
+      };
+    } else {
+      return {
+        collision: false
+      };
+    }
+  }
+  
+
+  function effect(oldMatrixA, matrixA, matrixB, elementA, elementB) {
+    let oldCoordA = oldMatrixA.match(matrixReg);
+    let coordA = matrixA.match(matrixReg);
+    let coordB = matrixB.match(matrixReg);
+    coordA = {
+      x: parseFloat(coordA[2]),
+      y: parseFloat(coordA[3]),
+    };
+    oldCoordA = {
+      x: parseFloat(oldCoordA[2]),
+      y: parseFloat(oldCoordA[3]),
+    };
+    coordB = {
+      x: parseFloat(coordB[2]),
+      y: parseFloat(coordB[3]),
+    };
+    const delta = {
+      x: coordA.x - oldCoordA.x,
+      y: coordA.y - oldCoordA.y
+    };
+    let direction = 0;
+    const cal = isCollision(elementA, elementB);
+
+    if (cal.collision) {
+      if (cal.delta.x < cal.delta.y) {
+          if (delta.x >= 0) {
+            direction = DIRECTION.RIGHT;
+          } else {
+            direction = DIRECTION.LEFT;
+          }
+      } else {
+        if (delta.y >= 0) {
+          direction = DIRECTION.BOTTOM;
+        } else {
+          direction = DIRECTION.TOP;
+        }
+      }
+      switch(direction) {
+        case DIRECTION.LEFT:
+          coordB.x -= cal.delta.x;
+          break;
+        case DIRECTION.RIGHT:
+          coordB.x += cal.delta.x;
+          break;
+        case DIRECTION.TOP:
+          coordB.y -= cal.delta.y;
+          break;
+        case DIRECTION.BOTTOM:
+          coordB.y += cal.delta.y;
+          break;
+      }
+    }
+
+    return "matrix(1, 0, 0, 1, {0}, {1})".format(coordB.x, coordB.y);
+  }
+
+  /**
+   * 初始化联合动画
+   * */
+  const linkAnimate = new Creator({
+    list: [{
+      targetA: domList[0],
+      targetB: domList[1],
+      type: "matrix",
+      effect: effect
+    }
+    ]
+  })
+</script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>齿轮</title>
+    <style>
+        .gear {
+            background: url(./img/gear.png) no-repeat 0 bottom;
+            background-size: 100% 100%;
+            background-position: 0 0;
+        }
+        .block {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-top: -75px;
+            margin-left: -75px;
+            width: 150px;
+            height: 150px;
+            user-select: none;
+            z-index: 0;
+            opacity: 0.8;
+        }
+        body {
+            width: 100%;
+            height: 900px;
+            top:0;
+            left: 0;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+<h1>点击其中任意一个齿轮</h1>
+<div class="block gear" style="margin-left: -301px;margin-top: -155px;" id="a"></div>
+<div class="block gear" style="margin-left: -212px;margin-top: -94px;" id="b"></div>
+<div class="block gear" style="margin-left: -234px;margin-top: 8px;" id="c"></div>
+<div class="block gear" style="margin-left: -338px;margin-top: 28px" id="d"></div>
+<div class="block gear" style="margin-left: -108px;margin-top:-73px" id="e"></div>
+<div class="block gear" style="margin-left: -19px;margin-top: -132px" id="f"></div>
+<div class="block gear" style="margin-left: -47px;margin-top: 15px" id="g"></div>
+<script src="./utils.js"></script>
+<script src="../es5module.js"></script>
+<script>
+  const domList = ["a", "b", "c", "d", "e", "f", "g"];
+
+
+  const body = document.body;
+  const reg = new RegExp(/rotate\((-?\d+)/);
+  domList.forEach(function(val, i) {
+    domList[i] = document.getElementById(val);
+    if (!domList[i].style.transform) {
+      domList[i].style.transform = 'rotate(0deg)';
+    }
+  });
+
+  /**
+   * 绑定交互事件
+   * */
+  const DeltaAngle = 3;
+  body.addEventListener("mousedown", function (e) {
+    if (e.target.className.match(/block/)) {
+      const target = e.target;
+      body.dataset['targetDom'] = target.id;
+      target.dataset['down'] = true;
+      let sign = 1;
+      if (e.layerX < target.clientWidth / 2) {
+        sign = -1;
+      }
+      function rotate() {
+        if(target.animateFn && target.dataset['down'] === 'true') {
+          let deltaAngle = target.style.transform.match(reg);
+          if (deltaAngle) {
+            deltaAngle = parseFloat(deltaAngle[1]) + sign * DeltaAngle;
+          } else {
+            return;
+          }
+          target.animateFn("rotate({0}deg)".format(deltaAngle))
+          requestAnimationFrame(rotate);
+        }
+      }
+      rotate();
+
+    }
+  });
+  body.addEventListener("mouseup", function (e) {
+    const target = document.getElementById(body.dataset['targetDom']);
+    target.dataset['down'] = false;
+  });
+
+
+  /**
+   * 构造影响函数
+   * */
+
+  function effect(oldRotateA, rotateA, rotateB) {
+    let angleA = rotateA.match(reg);
+    angleA = parseFloat(angleA[1]);
+    return "rotate({0}deg)".format(-angleA);
+  }
+
+  /**
+   * 初始化联合动画
+   * */
+  const linkAnimate = new Creator({
+    list: [{
+      targetA: domList[0],
+      targetB: domList[1],
+      effect: effect
+    },
+      {
+        targetA: domList[1],
+        targetB: domList[2],
+        effect: effect
+      },
+      {
+        targetA: domList[2],
+        targetB: domList[3],
+        effect: effect
+      },
+      {
+        targetA: domList[1],
+        targetB: domList[4],
+        effect: effect
+      },
+      {
+        targetA: domList[4],
+        targetB: domList[5],
+        effect: effect
+      },
+      {
+        targetA: domList[4],
+        targetB: domList[6],
+        effect: effect
+      }
+    ]
+  })
+</script>
+</body>
+</html>

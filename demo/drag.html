@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>拖拽</title>
+    <style>
+        .block {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-top: -75px;
+            margin-left: -75px;
+            width: 150px;
+            height: 150px;
+            user-select: none;
+            z-index: 0;
+            opacity: 0.8;
+        }
+        body {
+            width: 100%;
+            height: 900px;
+            top:0;
+            left: 0;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+<h1>拖动其中任意一个方块</h1>
+<div class="block" id="a">A</div>
+<div class="block" id="b">B</div>
+<div class="block"  id="c">C</div>
+<div class="block"  id="d">D</div>
+<div class="block"  id="e">E</div>
+<div class="block"  id="f">F</div>
+<div class="block"  id="g">G</div>
+<script src="./utils.js"></script>
+<script src="../es5module.js"></script>
+<script>
+  const domList = ["a", "b", "c", "d", "e", "f", "g"];
+  const body = document.body;
+  const matrixReg = new RegExp(/matrix\((\d+,\s?){4}(-?\d+),\s?(-?\d+)/);
+  domList.forEach(function(val, i) {
+    domList[i] = document.getElementById(val);
+    domList[i].style.backgroundColor = rand();
+    domList[i].dataset['drag'] = false;
+
+    if (!domList[i].style.transform) {
+      domList[i].style.transform = 'matrix(1, 0, 0, 1, 0, 0)';
+    }
+  });
+
+  /**
+   * 绑定交互事件
+   * */
+  body.addEventListener("mousedown", function (e) {
+    // console.log(e.target.id);
+    if (e.target.className === 'block') {
+      const target = e.target;
+      body.dataset['targetDom'] = target.id;
+      target.style.zIndex = 99999;
+      target.dataset['drag'] = true;
+      target.dataset['origin'] = JSON.stringify({
+        x: e.clientX,
+        y: e.clientY
+      });
+    }
+  });
+  body.addEventListener("mouseup", function (e) {
+    const target = document.getElementById(body.dataset['targetDom']);
+    if (target) {
+      target.style.zIndex = 0;
+      target.dataset['drag'] = false;
+      target.dataset['origin'] = JSON.stringify({
+        x: e.clientX,
+        y: e.clientY
+      });
+    }
+  });
+  body.addEventListener("mousemove", function (e) {
+    const target = document.getElementById(body.dataset['targetDom']);
+    if (target) {
+      if (target.dataset['drag'] === 'true') {
+        const coordinate = JSON.parse(target.dataset['origin']);
+        const delta = {
+          x: e.clientX - coordinate.x,
+          y: e.clientY - coordinate.y,
+        }
+        target.dataset['origin'] = JSON.stringify({
+          x: e.clientX,
+          y: e.clientY
+        });
+        let oldCoord = target.style.transform.match(matrixReg);
+        oldCoord = {
+          x: parseFloat(oldCoord[2]),
+          y: parseFloat(oldCoord[3]),
+        }
+        if(target.animateFn ) {
+          target.animateFn("matrix(1, 0, 0, 1, {0}, {1})".format(delta.x + oldCoord.x, delta.y + oldCoord.y))
+        }
+      }
+    }
+  });
+
+  /**
+   * 构造影响函数
+   * */
+
+  function effect(oldMatrixA, matrixA, matrixB) {
+    let coordA = matrixA.match(matrixReg);
+    let coordB = matrixB.match(matrixReg);
+    coordA = {
+      x: parseFloat(coordA[2]),
+      y: parseFloat(coordA[3]),
+    };
+    coordB = {
+      x: parseFloat(coordB[2]),
+      y: parseFloat(coordB[3]),
+    };
+    const delta = {
+      x: coordA.x - coordB.x,
+      y: coordA.y - coordB.y
+    };
+    if (Math.abs(delta.x) > 75) {
+      coordB.x += delta.x > 0? delta.x - 75 : delta.x + 75;
+    }
+    if (Math.abs(delta.y) > 75) {
+      coordB.y += delta.y > 0? delta.y - 75 : delta.y + 75;
+    }
+    return "matrix(1, 0, 0, 1, {0}, {1})".format(coordB.x, coordB.y);
+  }
+
+  /**
+   * 初始化联合动画
+   * */
+  const linkAnimate = new Creator({
+    list: [{
+      targetA: domList[0],
+      targetB: domList[1],
+      effect: effect
+    },
+      {
+        targetA: domList[0],
+        targetB: domList[3],
+        effect: effect
+      },
+      {
+        targetA: domList[1],
+        targetB: domList[2],
+        effect: effect
+      },
+      {
+        targetA: domList[3],
+        targetB: domList[4],
+        effect: effect
+      },
+      {
+        targetA: domList[2],
+        targetB: domList[5],
+        effect: effect
+      },
+      {
+        targetA: domList[4],
+        targetB: domList[6],
+        effect: effect
+      }
+    ]
+  })
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "combinationanimate",
+  "version": "1.0.8",
+  "description": "transform动画可以进行联动",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "lidaibin",
+  "license": "ISC"
+}
